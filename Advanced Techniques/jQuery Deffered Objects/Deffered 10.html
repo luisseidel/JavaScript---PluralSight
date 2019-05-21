@@ -1,0 +1,107 @@
+<!doctype html>
+<html language="en">
+    <head>
+        <title> deferredProcessing </title>
+        <script script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+        <link type="text/css" rel="stylesheet" href="styles.css"/>
+        <meta charset="utf-8"/>
+    </head>
+    <body>
+        <input id="Load" type="button" value="Load"/>
+        <div id="Section1"></div>
+        <div id="Section2"></div>
+        <div id="Section3"></div>
+        <input id="Proceed" type="button" value="Proceed" disabled="true"/>
+        <div id="Messages"></div>
+    </body>
+    <script>
+        $(function() {
+            
+            var showMessage = function(options) {
+                if(options !== 'object') {
+                    options = {
+                        message: 'Parameter not an object', error: true
+                    };
+                    options.message = options.message || 'No message specified';
+                    options.error = options.error || false;
+                    $('#Messages').append(options.error ? 'Error: ' : '').append(options.message).append('<br/>');
+                }
+            },
+            
+            loadSection = function(options) {
+                var defer = $.Deferred(),
+                    $div, msg;
+                
+                if(typeof options !== 'object') {
+                    msg = 'Expecting parameter object';
+                    showMessage({ message: msg, error: true });
+                    return defer.reject({ statusText: msg });
+                }
+                
+                options.selector = options.selector || '';
+                options.url = options.url || '';
+                options.dynamic = options.dynamic || false;
+                
+                if(options.url === ''){
+                    msg = 'Missing URL';
+                    showMessage({ message: msg, error: true });
+                   return defer.reject({ statusText: msg });
+                }
+                
+                $div = $(options.selector)
+                
+                if($div.length > 0){
+                    $.get(options.url, function(){}, 'html')
+                        .done(function(result){
+                            $div.html(result);
+                            if(!options.dynamic) {
+                                defer.resolve();
+                            }
+                        })
+                        .fail(function(result) {
+                            msg = 'Could not Load URL: ' + options.url;
+                            showMessage({ message: msg, error: true });
+                            defer.reject(result);
+                        });
+                    if(options.dynamic) {
+                        $div.off('complete, failure') //remove todos os manipuladores de eventos previamente acoplados
+                            .on('complete', function(event){
+                                defer.resolve();                             
+                            })
+                            .on('failure', function(event, result) {
+                                msg = 'Dynamic content: ' + result.statusText;
+                                showMessage({ message: msg, error: true });
+                                defer.reject(result);
+                            })
+                    }
+                } else {
+                    msg = 'Error in selector';
+                    showMessage({ message: msg, error: true });
+                    defer.reject({ statusText: msg });
+                }
+                
+                return defer.promise();
+            }
+            
+            $('#Load').click(function() {
+                $.when(
+                    showMessage({ message: 'Starting processing' }),
+                    loadSection({ selector: '#Section1', url: 'Content1bb.html', dynamic: true}),
+                    loadSection({ selector: '#Section2', url: 'Content2.html'}),
+                    loadSection({ selector: '#Section3', url: 'Content3b.html', dynamic: true}),
+                    showMessage({ message: 'Done with processing' })
+                )
+                
+                .done(function() {
+                    
+                })
+                .fail(function(result) {
+                    $('#Messages').append('Failure! <br />').append('Result: ' + result.statusText + '<br />' + result.responseXML);
+                })
+                .always(function() {
+                    $('#Proceed').removeAttr('disabled');
+                });
+            });
+        })
+    </script>
+</html>

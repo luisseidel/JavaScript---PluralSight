@@ -1,0 +1,11 @@
+<div id="Content3"> This is content #3 </div>
+<script>
+    $(function() {
+        setTimeout(function() {
+            $('#Content3')
+                .append('<hr/>')
+                .append('THIS IS IMPORTANT')
+                .trigger('failure', {statusText: 'Content 3b truggered error'});
+        }, 3000);
+    });
+</script>
